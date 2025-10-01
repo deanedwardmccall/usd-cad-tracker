@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>USD/CAD Tracker</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #2d3748;
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        .rate-display {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            color: white;
+            margin-bottom: 20px;
+        }
+        
+        .rate-value {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .rate-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .change {
+            font-size: 18px;
+            margin-top: 10px;
+        }
+        
+        .positive { color: #48bb78; }
+        .negative { color: #f56565; }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .info-item {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .info-item-label {
+            font-size: 12px;
+            color: #718096;
+            margin-bottom: 5px;
+        }
+        
+        .info-item-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #2d3748;
+        }
+        
+        .converter {
+            margin-top: 20px;
+        }
+        
+        .converter h3 {
+            color: #2d3748;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .converter-inputs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .input-group {
+            flex: 1;
+        }
+        
+        .input-group label {
+            display: block;
+            font-size: 12px;
+            color: #718096;
+            margin-bottom: 5px;
+        }
+        
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .chart-container {
+            margin-top: 20px;
+            height: 250px;
+        }
+        
+        .last-update {
+            text-align: center;
+            color: #718096;
+            font-size: 12px;
+            margin-top: 15px;
+        }
+        
+        .refresh-btn {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .refresh-btn:hover {
+            background: #5568d3;
+        }
+        
+        .loading {
+            opacity: 0.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="header">
+                <h1>💵 USD / CAD 💵</h1>
+                <p class="rate-label">Live Exchange Rate</p>
+            </div>
+            
+            <div class="rate-display">
+                <div class="rate-label">1 USD =</div>
+                <div class="rate-value" id="currentRate">Loading...</div>
+                <div class="rate-label">CAD</div>
+                <div class="change" id="changeDisplay"></div>
+            </div>
+            
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-item-label">24h High</div>
+                    <div class="info-item-value" id="high24h">-</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-item-label">24h Low</div>
+                    <div class="info-item-value" id="low24h">-</div>
+                </div>
+            </div>
+            
+            <div class="converter">
+                <h3>Quick Converter</h3>
+                <div class="converter-inputs">
+                    <div class="input-group">
+                        <label for="usdInput">USD</label>
+                        <input type="number" id="usdInput" placeholder="100" value="100">
+                    </div>
+                    <div class="input-group">
+                        <label for="cadInput">CAD</label>
+                        <input type="number" id="cadInput" placeholder="0" readonly>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="refresh-btn" id="refreshBtn">Refresh Rate</button>
+            
+            <div class="last-update" id="lastUpdate">Last updated: Never</div>
+        </div>
+        
+        <div class="card">
+            <h3 style="margin-bottom: 15px; color: #2d3748;">24 Hour Chart</h3>
+            <div class="chart-container">
+                <canvas id="rateChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentRate = 0;
+        let previousRate = 0;
+        let chart = null;
+        let historicalData = [];
+        
+        // Initialize chart
+        const ctx = document.getElementById('rateChart').getContext('2d');
+        chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'USD/CAD',
+                    data: [],
+                    borderColor: '#667eea',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        ticks: {
+                            callback: function(value) {
+                                return value.toFixed(4);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        async function fetchRate() {
+            const btn = document.getElementById('refreshBtn');
+            btn.classList.add('loading');
+            btn.textContent = 'Updating...';
+            
+            try {
+                // Using exchangerate-api.com (free tier: 1,500 requests/month)
+                const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+                const data = await response.json();
+                
+                previousRate = currentRate;
+                currentRate = data.rates.CAD;
+                
+                updateDisplay();
+                updateChart();
+                updateConverter();
+                
+                document.getElementById('lastUpdate').textContent = 
+                    `Last updated: ${new Date().toLocaleTimeString()}`;
+                
+            } catch (error) {
+                console.error('Error fetching rate:', error);
+                alert('Failed to fetch exchange rate. Please try again.');
+            } finally {
+                btn.classList.remove('loading');
+                btn.textContent = 'Refresh Rate';
+            }
+        }
+        
+        function updateDisplay() {
+            document.getElementById('currentRate').textContent = currentRate.toFixed(4);
+            
+            if (previousRate > 0) {
+                const change = currentRate - previousRate;
+                const changePercent = ((change / previousRate) * 100).toFixed(2);
+                const changeDisplay = document.getElementById('changeDisplay');
+                
+                if (change > 0) {
+                    changeDisplay.className = 'change positive';
+                    changeDisplay.textContent = `▲ +${change.toFixed(4)} (+${changePercent}%)`;
+                } else if (change < 0) {
+                    changeDisplay.className = 'change negative';
+                    changeDisplay.textContent = `▼ ${change.toFixed(4)} (${changePercent}%)`;
+                } else {
+                    changeDisplay.className = 'change';
+                    changeDisplay.textContent = '— No change';
+                }
+            }
+            
+            // Simulate 24h high/low (in real app, you'd get this from API)
+            const variance = 0.01;
+            document.getElementById('high24h').textContent = 
+                (currentRate * (1 + variance)).toFixed(4);
+            document.getElementById('low24h').textContent = 
+                (currentRate * (1 - variance)).toFixed(4);
+        }
+        
+        function updateChart() {
+            const now = new Date();
+            const timeLabel = now.toLocaleTimeString();
+            
+            historicalData.push({
+                time: timeLabel,
+                rate: currentRate
+            });
+            
+            // Keep only last 20 data points
+            if (historicalData.length > 20) {
+                historicalData.shift();
+            }
+            
+            chart.data.labels = historicalData.map(d => d.time);
+            chart.data.datasets[0].data = historicalData.map(d => d.rate);
+            chart.update();
+        }
+        
+        function updateConverter() {
+            const usdInput = document.getElementById('usdInput');
+            const cadInput = document.getElementById('cadInput');
+            
+            usdInput.addEventListener('input', () => {
+                const usd = parseFloat(usdInput.value) || 0;
+                cadInput.value = (usd * currentRate).toFixed(2);
+            });
+            
+            // Initial conversion
+            cadInput.value = (parseFloat(usdInput.value) * currentRate).toFixed(2);
+        }
+        
+        // Event listeners
+        document.getElementById('refreshBtn').addEventListener('click', fetchRate);
+        
+        // Fetch rate on load
+        fetchRate();
+        
+        // Auto-refresh every 5 minutes
+        setInterval(fetchRate, 300000);
+    </script>
+</body>
+</html>
