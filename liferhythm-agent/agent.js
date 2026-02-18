@@ -22,8 +22,14 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { resolve } from 'path';
 import { homedir } from 'os';
 
-const SHEET_ID = '1XJ5oA-FjBx7P_bn-gM2qL_Y5rXYFbFhSsw74ejyph-E';
-const MCP_SERVER_PATH = resolve(homedir(), 'liferhythm-mcp');
+// Sheet ID should come from environment — not hardcoded in source.
+// Set LIFERHYTHM_SHEET_ID in your .env file (see .env.example).
+const SHEET_ID = process.env.LIFERHYTHM_SHEET_ID || '1XJ5oA-FjBx7P_bn-gM2qL_Y5rXYFbFhSsw74ejyph-E';
+const MCP_SERVER_PATH = process.env.MCP_SERVER_PATH || resolve(homedir(), 'liferhythm-mcp');
+
+// Maximum number of agentic tool-call turns per request.
+// Prevents runaway loops from prompt injection or model issues.
+const MAX_TURNS = 10;
 
 const SYSTEM_PROMPT = `You are the LifeRhythm assistant — an AI that helps manage a person's life rhythm through natural conversation.
 
@@ -76,11 +82,26 @@ export class LifeRhythmAgent {
       { capabilities: {} }
     );
 
+    // Explicitly whitelist env vars passed to the MCP subprocess.
+    // Never forward the full process.env — it contains API keys and credentials.
+    const mcpEnv = {
+      PATH: process.env.PATH,
+      HOME: process.env.HOME,
+      NODE_ENV: process.env.NODE_ENV || 'production',
+      LIFERHYTHM_SHEET_ID: this.sheetId,
+      // Google credentials — MCP server needs one of these:
+      GOOGLE_APPLICATION_CREDENTIALS: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+      GOOGLE_SERVICE_ACCOUNT_EMAIL: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+      GOOGLE_PRIVATE_KEY: process.env.GOOGLE_PRIVATE_KEY,
+    };
+    // Strip undefined keys so the child doesn't see them at all
+    Object.keys(mcpEnv).forEach(k => mcpEnv[k] === undefined && delete mcpEnv[k]);
+
     const transport = new StdioClientTransport({
       command: 'node',
       args: ['index.js'],
       cwd: this.mcpServerPath,
-      env: { ...process.env, SHEET_ID: this.sheetId },
+      env: mcpEnv,
     });
 
     await this.mcpClient.connect(transport);
@@ -118,9 +139,11 @@ export class LifeRhythmAgent {
 
     const messages = [{ role: 'user', content: userMessage }];
     const actions = [];
+    let turns = 0;
 
-    // Agentic loop: keep going until Claude stops calling tools
-    while (true) {
+    // Agentic loop: keep going until Claude stops calling tools or we hit the limit
+    while (turns < MAX_TURNS) {
+      turns++;
       const response = await this.anthropic.messages.create({
         model: 'claude-opus-4-6',
         max_tokens: 4096,
@@ -157,6 +180,8 @@ export class LifeRhythmAgent {
       // Feed results back to Claude
       messages.push({ role: 'user', content: toolResults });
     }
+
+    throw new Error(`Agent exceeded maximum turns (${MAX_TURNS}). Aborting to prevent runaway tool calls.`);
   }
 
   /**

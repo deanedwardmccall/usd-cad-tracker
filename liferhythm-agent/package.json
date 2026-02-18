@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node index.js",
     "chat": "node index.js --interactive",
-    "test": "node --experimental-vm-modules ../node_modules/.bin/jest --config jest.config.js"
+    "test": "node --experimental-vm-modules node_modules/.bin/jest --config jest.config.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
