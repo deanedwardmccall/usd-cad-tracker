@@ -1,0 +1,59 @@
+{
+  "name": "mcpeasy",
+  "version": "0.1.0-alpha",
+  "description": "One command. Connected AI. Generate MCP servers for Claude in seconds.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "bin": {
+    "mcpeasy": "./dist/cli/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli/index.ts",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "claude",
+    "anthropic",
+    "ai",
+    "database",
+    "postgres",
+    "mysql",
+    "sqlite",
+    "slack",
+    "stripe",
+    "generator",
+    "cli"
+  ],
+  "author": "Dean Wilkins <dean@digitalmass.ca>",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "dist",
+    "templates",
+    "README.md",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "better-sqlite3": "^12.6.2",
+    "commander": "^12.0.0",
+    "mysql2": "^3.18.2",
+    "pg": "^8.13.0"
+  },
+  "devDependencies": {
+    "@testcontainers/postgresql": "^11.12.0",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20.0.0",
+    "@types/pg": "^8.11.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.0.0"
+  }
+}
