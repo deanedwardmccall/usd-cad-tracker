@@ -1,0 +1,46 @@
+services:
+
+  # ─── LifeRhythm Bot ─────────────────────────────────────────────────────────
+  bot:
+    build: .
+    container_name: liferhythm-bot
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Point the MCP server at the volume-mounted copy inside the container
+      MCP_SERVER_PATH: /mcp
+    volumes:
+      # Mount your liferhythm-mcp directory so the bot can spawn it.
+      # Change the left side to wherever you cloned liferhythm-mcp on Unraid.
+      - /mnt/user/appdata/liferhythm-mcp:/mcp:ro
+      # Persistent logs
+      - ./logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ─── Postgres ───────────────────────────────────────────────────────────────
+  # Not wired into the app yet — here so the data store is ready when you
+  # migrate off Google Sheets. Connection string will be DATABASE_URL in .env.
+  db:
+    image: postgres:16-alpine
+    container_name: liferhythm-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-liferhythm}
+      POSTGRES_USER: ${POSTGRES_USER:-liferhythm}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      # Persistent data — survives container restarts and rebuilds
+      - liferhythm-db-data:/var/lib/postgresql/data
+    ports:
+      # Expose locally so you can connect with pgAdmin / DBeaver / psql
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-liferhythm}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  liferhythm-db-data:
