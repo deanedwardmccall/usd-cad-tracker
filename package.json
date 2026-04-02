@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Easy to view financial data for viewing on my phone",
   "scripts": {
+    "start": "node server.js",
     "test": "jest --verbose"
   },
   "devDependencies": {
